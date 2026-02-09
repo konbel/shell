@@ -1,15 +1,20 @@
 #include <iostream>
+#include <pwd.h>
+#include <regex>
 
 #include "commands.h"
 #include "utils.h"
-#include <pwd.h>
+#include "graphics.h"
 
 uid_t uid;
 passwd *pw;
 char hostname[256];
 
 void print_prompt() {
-    std::cout << pw->pw_name << "@" << hostname << ":" << getcwd(nullptr, 0) << "$ ";
+    const std::string dir = std::regex_replace(getcwd(nullptr, 0), std::regex(getenv("HOME")), "~");
+
+    std::cout << GREEN << BOLD << pw->pw_name << "@" << hostname << RESET << ":" << BLUE << BOLD
+            << dir << RESET << "$ ";
 }
 
 void eval(const std::string &input) {

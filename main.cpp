@@ -35,22 +35,26 @@ std::vector<std::string> split(const std::string &str, const char delimiter) {
 
 #pragma region builtins
 
-void echo(const std::string &input, const std::vector<std::string> &args);
 void type(const std::string &input, const std::vector<std::string> &args);
 
 void exit_builtin(const std::string& input, const std::vector<std::string> &args) {
     exit(EXIT_SUCCESS);
 }
 
+void echo(const std::string &input, const std::vector<std::string> &args) {
+    std::cout << input.substr(5) << std::endl;
+}
+
+void pwd(const std::string &input, const std::vector<std::string> &args) {
+    std::cout << getcwd(nullptr, 0) << std::endl;
+}
+
 std::unordered_map<std::string, void (*)(const std::string&, const std::vector<std::string> &)> builtins = {
     {std::string("exit"), &exit_builtin},
     {std::string("echo"), &echo},
     {std::string("type"), &type},
+    {std::string("pwd"), &pwd},
 };
-
-void echo(const std::string &input, const std::vector<std::string> &args) {
-    std::cout << input.substr(5) << std::endl;
-}
 
 void type(const std::string &input, const std::vector<std::string> &args) {
     for (auto &arg : args) {

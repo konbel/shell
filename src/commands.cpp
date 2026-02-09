@@ -9,7 +9,7 @@ void exit_builtin(const std::string &input, const std::vector<std::string> &args
 }
 
 void echo(const std::string &input, const std::vector<std::string> &args) {
-    std::cout << input.substr(5) << std::endl;
+    std::cout << join(args, " ") << std::endl;
 }
 
 void type(const std::string &input, const std::vector<std::string> &args) {

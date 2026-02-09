@@ -8,9 +8,8 @@ void print_prompt() {
 }
 
 void eval(const std::string &input) {
-    auto args = split(input, ' ');
-    const std::string command = args[0];
-    args.erase(args.begin());
+    const auto command = parse_command(input);
+    const auto args = parse_args(input.substr(command.length()));
 
     // handle built in commands
     if (builtins.contains(command)) {

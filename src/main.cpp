@@ -2,9 +2,14 @@
 
 #include "commands.h"
 #include "utils.h"
+#include <pwd.h>
+
+uid_t uid;
+passwd *pw;
+char hostname[256];
 
 void print_prompt() {
-    std::cout << "$ ";
+    std::cout << pw->pw_name << "@" << hostname << ":" << getcwd(nullptr, 0) << "$ ";
 }
 
 void eval(const std::string &input) {
@@ -31,6 +36,15 @@ int main() {
     std::cerr << std::unitbuf;
 
     parse_path();
+
+    uid = getuid();
+    pw = getpwuid(uid);
+    if (pw == nullptr) {
+        perror("error fetching user info");
+        exit(EXIT_FAILURE);
+    }
+
+    gethostname(hostname, sizeof(hostname));
 
     // REPL
     print_prompt();

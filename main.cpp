@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <vector>
 #include <sstream>
@@ -31,6 +32,10 @@ std::vector<std::string> split(const std::string &str, const char delimiter) {
     return parts;
 }
 
+bool is_whitespace(const std::string &str) {
+    return std::ranges::all_of(str, [](const char c) { return std::isspace(c); });
+}
+
 #pragma endregion // util
 
 #pragma region builtins
@@ -49,11 +54,33 @@ void pwd(const std::string &input, const std::vector<std::string> &args) {
     std::cout << getcwd(nullptr, 0) << std::endl;
 }
 
+void cd(const std::string &input, const std::vector<std::string> &args) {
+    if (args.empty() || is_whitespace(input.substr(3))) {
+        chdir(getenv("HOME"));
+        return;
+    }
+
+    if (args.size() > 1) {
+        std::cout << "cd: too many arguments" << std::endl;
+        return;
+    }
+
+    if (args[0][0] == '~') {
+        chdir(getenv("HOME"));
+        return;
+    }
+
+    if (chdir(args[0].c_str()) != 0) {
+        std::cout << "cd: " << args[0] << ": No such file or directory" << std::endl;
+    }
+}
+
 std::unordered_map<std::string, void (*)(const std::string&, const std::vector<std::string> &)> builtins = {
     {std::string("exit"), &exit_builtin},
     {std::string("echo"), &echo},
     {std::string("type"), &type},
     {std::string("pwd"), &pwd},
+    {std::string("cd"), &cd},
 };
 
 void type(const std::string &input, const std::vector<std::string> &args) {

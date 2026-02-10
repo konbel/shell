@@ -6,9 +6,12 @@
 #include "utils.h"
 #include "graphics.h"
 
+// session and user information
 uid_t uid;
 passwd *pw;
 char hostname[256];
+int stdout_fd;
+int stderr_fd;
 
 void print_prompt() {
     const std::string dir = std::regex_replace(getcwd(nullptr, 0), std::regex(getenv("HOME")), "~");
@@ -21,19 +24,59 @@ void eval(const std::string &input) {
     const auto command = parse_command(input);
     const auto args = parse_args(input.substr(command.length()));
 
-    // handle built in commands
+    // check for output and error redirecting
+    std::vector<std::string> filtered_args;
+    bool redirecting_output = false;
+    bool redirecting_error = false;
+    for (int i = 0; i < args.size() - 1; i++) {
+        const std::string &arg = args[i];
+        const std::string &output = args[i + 1];
+
+        if (arg == ">" || arg == "1>") {
+            freopen(output.c_str(), "w", stdout);
+            redirecting_output = true;
+            break;
+        }
+
+        if (arg == "2>") {
+            freopen(output.c_str(), "w", stderr);
+            redirecting_error = true;
+            break;
+        }
+
+        if (arg == ">>" || arg == "1>>") {
+            freopen(output.c_str(), "a", stdout);
+            redirecting_output = true;
+            break;
+        }
+
+        if (arg == "2>>") {
+            freopen(output.c_str(), "a", stderr);
+            redirecting_error = true;
+            break;
+        }
+
+        filtered_args.push_back(arg);
+    }
+
+    // handle command
     if (builtins.contains(command)) {
-        builtins[command](input, args);
-        return;
-    }
-
-    // handle external executables
-    if (const std::string full_path = find_executable(command); !full_path.empty()) {
+        builtins[command](input, filtered_args);
+    } else if (const std::string full_path = find_executable(command); !full_path.empty()) {
         std::system(input.c_str());
+    } else {
+        std::cout << command << ": command not found" << std::endl;
         return;
     }
 
-    std::cout << command << ": command not found" << std::endl;
+    // reset output if it was redirected
+    if (redirecting_output) {
+        dup2(stdout_fd, STDOUT_FILENO);
+        close(stderr_fd);
+    } else if (redirecting_error) {
+        dup2(stderr_fd, STDERR_FILENO);
+        close(stderr_fd);
+    }
 }
 
 int main() {
@@ -50,6 +93,9 @@ int main() {
     }
 
     gethostname(hostname, sizeof(hostname));
+
+    stdout_fd = dup(STDOUT_FILENO);
+    stderr_fd = dup(STDERR_FILENO);
 
     // REPL
     print_prompt();

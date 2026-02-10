@@ -54,14 +54,29 @@ inline void parse_path() {
 }
 
 inline std::string parse_command(const std::string &input) {
-    size_t command_length = input.length();
-    for (int i = 0; i < input.length(); i++) {
-        if (std::isspace(input[i])) {
-            command_length = i;
+    std::string command;
+    bool in_single_quotes = false;
+    bool in_double_quotes = false;
+
+    for (const char c : input) {
+        if (isspace(c) && !in_single_quotes && !in_double_quotes) {
             break;
         }
+
+        if (c == '\'' && !in_double_quotes) {
+            in_single_quotes = !in_single_quotes;
+            continue;
+        }
+
+        if (c == '"' && !in_single_quotes) {
+            in_double_quotes = !in_double_quotes;
+            continue;
+        }
+
+        command += c;
     }
-    return input.substr(0, command_length);
+
+    return command;
 }
 
 inline std::vector<std::string> parse_args(const std::string &arg_string) {

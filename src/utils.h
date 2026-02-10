@@ -67,21 +67,63 @@ inline std::string parse_command(const std::string &input) {
 inline std::vector<std::string> parse_args(const std::string &arg_string) {
     const std::string trimmed = std::regex_replace(arg_string, trim_regex, "");
 
-    std::string result;
-    bool in_quotes = false;
+    std::vector<std::string> args;
+    std::string buffer;
+    bool in_single_quotes = false;
+    bool in_double_quotes = false;
+    bool escaped = false;
+
     for (const char c : trimmed) {
-        if (c == '\'') {
-            in_quotes = !in_quotes;
-        } else if (isspace(c) && !in_quotes) {
-            if (result.back() != ' ') {
-                result += ' ';
-            }
-        } else {
-            result += c;
+        // escaping
+        if (escaped) {
+            buffer += c;
+            escaped = false;
+            continue;
         }
+
+        if (c == '\\' && !in_single_quotes) {
+            escaped = true;
+            continue;
+        }
+
+        // single quotes
+        if (c == '\'' && !in_double_quotes) {
+            in_single_quotes = !in_single_quotes;
+            continue;
+        }
+
+        if (in_single_quotes) {
+            buffer += c;
+            continue;
+        }
+
+        // double quotes
+        if (c == '"') {
+            in_double_quotes = !in_double_quotes;
+            continue;
+        }
+
+        if (in_double_quotes) {
+            buffer += c;
+            continue;
+        }
+
+        // whitespaces
+        if (isspace(c)) {
+            if (buffer.empty()) {
+                continue;
+            }
+            args.push_back(buffer);
+            buffer.clear();
+            continue;
+        }
+
+        // default
+        buffer += c;
     }
 
-    return split(result, ' ');
+    args.push_back(buffer);
+    return args;
 }
 
 #endif //SHELL_UTILS_H

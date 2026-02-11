@@ -20,6 +20,14 @@ void print_prompt() {
             << dir << RESET << "$ ";
 }
 
+inline bool check_redirect_destination(const std::vector<std::string> &arg, int i) {
+    if (i + 1 >= arg.size()) {
+        std::cout << "syntax error near unexpected token `newline'" << std::endl;
+        return false;
+    }
+    return true;
+}
+
 void eval(const std::string &input) {
     const auto command = parse_command(input);
     const auto args = parse_args(input.substr(command.length()));
@@ -28,31 +36,39 @@ void eval(const std::string &input) {
     std::vector<std::string> filtered_args;
     bool redirecting_output = false;
     bool redirecting_error = false;
-    for (int i = 0; i < args.size() - 1; i++) {
+    for (int i = 0; i < args.size(); i++) {
         const std::string &arg = args[i];
         const std::string &output = args[i + 1];
 
         if (arg == ">" || arg == "1>") {
-            freopen(output.c_str(), "w", stdout);
-            redirecting_output = true;
+            if (check_redirect_destination(args, i)) {
+                freopen(output.c_str(), "w", stdout);
+                redirecting_output = true;
+            }
             break;
         }
 
         if (arg == "2>") {
-            freopen(output.c_str(), "w", stderr);
-            redirecting_error = true;
+            if (check_redirect_destination(args, i)) {
+                freopen(output.c_str(), "w", stderr);
+                redirecting_error = true;
+            }
             break;
         }
 
         if (arg == ">>" || arg == "1>>") {
-            freopen(output.c_str(), "a", stdout);
-            redirecting_output = true;
+            if (check_redirect_destination(args, i)) {
+                freopen(output.c_str(), "a", stdout);
+                redirecting_output = true;
+            }
             break;
         }
 
         if (arg == "2>>") {
-            freopen(output.c_str(), "a", stderr);
-            redirecting_error = true;
+            if (check_redirect_destination(args, i)) {
+                freopen(output.c_str(), "a", stderr);
+                redirecting_error = true;
+            }
             break;
         }
 

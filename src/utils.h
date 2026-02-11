@@ -57,22 +57,39 @@ inline std::string parse_command(const std::string &input) {
     std::string command;
     bool in_single_quotes = false;
     bool in_double_quotes = false;
+    bool escaped = false;
 
     for (const char c : input) {
+        // escaping
+        if (escaped) {
+            command += c;
+            escaped = false;
+            continue;
+        }
+
+        if (c == '\\' && !in_single_quotes) {
+            escaped = true;
+            continue;
+        }
+
+        // whitespaces
         if (isspace(c) && !in_single_quotes && !in_double_quotes) {
             break;
         }
 
+        // single quotes
         if (c == '\'' && !in_double_quotes) {
             in_single_quotes = !in_single_quotes;
             continue;
         }
 
+        // double quotes
         if (c == '"' && !in_single_quotes) {
             in_double_quotes = !in_double_quotes;
             continue;
         }
 
+        // default
         command += c;
     }
 

@@ -16,7 +16,7 @@ int stderr_fd;
 void print_prompt() {
     const std::string dir = std::regex_replace(getcwd(nullptr, 0), std::regex(getenv("HOME")), "~");
 
-    std::cout << GREEN << BOLD << pw->pw_name << "@" << hostname << RESET << ":" << BLUE << BOLD
+    std::cout << ORANGE << BOLD << pw->pw_name << "@" << hostname << RESET << ":" << BLUE << BOLD
             << dir << RESET << "$ ";
 }
 

@@ -19,6 +19,7 @@ inline constexpr char BLUE[]            = "\033[34m";
 inline constexpr char MAGENTA[]         = "\033[35m";
 inline constexpr char CYAN[]            = "\033[36m";
 inline constexpr char WHITE[]           = "\033[37m";
+inline constexpr char ORANGE[]          = "\033[38;5;208m";
 
 inline constexpr char BRIGHT_BLACK[]    = "\033[90m";
 inline constexpr char BRIGHT_RED[]      = "\033[91m";

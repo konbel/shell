@@ -48,6 +48,12 @@ inline bool is_whitespace(const std::string &str) {
     return std::ranges::all_of(str, [](const char c) { return std::isspace(c); });
 }
 
+inline bool is_number(const std::string& str) {
+    std::string::const_iterator it = str.begin();
+    while (it != str.end() && std::isdigit(*it)) ++it;
+    return !str.empty() && it == str.end();
+}
+
 inline void parse_path() {
     const std::string path_env = std::getenv("PATH");
     path = split(path_env, ':');

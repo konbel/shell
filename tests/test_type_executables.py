@@ -16,30 +16,31 @@ def test_type_executables(shell_executable):
     new_path = "/tmp/rat:/tmp/bee:/tmp/pig:" + current_path
     shell_tester.start_shell(env={"PATH": new_path})
 
-    # Setup: create directories and files under /tmp
-    shell_tester.execute("mkdir -p /tmp/rat /tmp/bee /tmp/pig", True)
+    try:
+        # Setup: create directories and files under /tmp
+        shell_tester.execute("mkdir -p /tmp/rat /tmp/bee /tmp/pig", True)
 
-    shell_tester.execute("touch /tmp/rat/my_exe", True)
-    shell_tester.execute("touch /tmp/pig/my_exe", True)
-    shell_tester.execute("touch /tmp/bee/my_exe", True)
+        shell_tester.execute("touch /tmp/rat/my_exe", True)
+        shell_tester.execute("touch /tmp/pig/my_exe", True)
+        shell_tester.execute("touch /tmp/bee/my_exe", True)
 
-    # Make only /tmp/bee/my_exe executable
-    shell_tester.execute("chmod 644 /tmp/rat/my_exe", True)
-    shell_tester.execute("chmod 644 /tmp/pig/my_exe", True)
-    shell_tester.execute("chmod 755 /tmp/bee/my_exe", True)
+        # Make only /tmp/bee/my_exe executable
+        shell_tester.execute("chmod 644 /tmp/rat/my_exe", True)
+        shell_tester.execute("chmod 644 /tmp/pig/my_exe", True)
+        shell_tester.execute("chmod 755 /tmp/bee/my_exe", True)
 
-    # Now query `type` for a few system commands and our test executable
-    cases = [
-        ("type cat", "cat is /usr/bin/cat"),
-        ("type cp", "cp is /usr/bin/cp"),
-        ("type mkdir", "mkdir is /usr/bin/mkdir"),
-        ("type my_exe", "my_exe is /tmp/bee/my_exe"),
-        ("type invalid_mango_command", "invalid_mango_command not found"),
-        ("type invalid_grape_command", "invalid_grape_command not found"),
-    ]
+        # Now query `type` for a few system commands and our test executable
+        cases = [
+            ("type cat", "cat is /usr/bin/cat"),
+            ("type cp", "cp is /usr/bin/cp"),
+            ("type mkdir", "mkdir is /usr/bin/mkdir"),
+            ("type my_exe", "my_exe is /tmp/bee/my_exe"),
+            ("type invalid_mango_command", "invalid_mango_command not found"),
+            ("type invalid_grape_command", "invalid_grape_command not found"),
+        ]
 
-    for cmd, expected in cases:
-        output = shell_tester.execute(cmd)
-        assert output == expected, f'Expected "{expected}" but got "{output}"'
-
-    shell_tester.stop()
+        for cmd, expected in cases:
+            output = shell_tester.execute(cmd)[0]
+            assert output == expected + "\n", f'Expected "{expected}" but got "{output}"'
+    finally:
+        shell_tester.stop()

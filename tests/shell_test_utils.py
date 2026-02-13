@@ -3,7 +3,18 @@ import subprocess
 import os
 import tempfile
 import shutil
-import select
+import threading
+import queue
+
+
+def _read_stream(stream, queue_obj):
+    """Read lines from a stream and put them into a queue"""
+    try:
+        for line in iter(stream.readline, ''):
+            if line:
+                queue_obj.put(line)
+    finally:
+        queue_obj.put(None)  # Signal end of stream
 
 
 class ShellTester:
@@ -12,6 +23,10 @@ class ShellTester:
     def __init__(self, shell_program_path="./shell"):
         self.shell_program_path = shell_program_path
         self.process = None
+        self.stdout_queue = queue.Queue()
+        self.stderr_queue = queue.Queue()
+        self.stdout_thread = None
+        self.stderr_thread = None
 
     def start_shell(self, env=None):
         """Start the shell process"""
@@ -32,42 +47,34 @@ class ShellTester:
         except FileNotFoundError:
             raise RuntimeError(f"Shell program not found at {self.shell_program_path}")
 
+        # Start reader threads for stdout and stderr
+        self.stdout_thread = threading.Thread(target=_read_stream, args=(self.process.stdout, self.stdout_queue), daemon=True)
+        # self.stderr_thread = threading.Thread(target=_read_stream, args=(self.process.stderr, self.stderr_queue), daemon=True)
+        self.stdout_thread.start()
+        # self.stderr_thread.start()
+
     def execute(self, command, no_output=False):
         """Execute a command and return the output.
 
-        This will wait up to `timeout` seconds for output to be available
-        on the subprocess stdout. If nothing is available within the timeout
-        a RuntimeError is raised. This avoids blocking indefinitely on
-        readline().
+        This will wait for output to be available on the stdout queue.
+        Reads lines until it finds the prompt, then extracts and returns the output.
         """
         if not self.process:
             raise RuntimeError("Shell process not started. Call start() first.")
 
-        try:
-            # send the command
-            self.process.stdin.write(command + "\n")
-            self.process.stdin.flush()
+        self.process.stdin.write(command + "\n")
+        self.process.stdin.flush()
 
-            if no_output:
-                return ""
+        if no_output:
+            return []
 
-            output = self.process.stdout.readline()
-            while True:
-                if "$ " in output:
-                    break
-                output = self.process.stdout.readline()
+        output = [self.stdout_queue.get()]
+        while True:
+            if self.stdout_queue.empty():
+                break
+            output.append(self.stdout_queue.get_nowait())
 
-            # try to extract prompt and the first line
-            if "$ " in output:
-                output = output[output.rfind("$ ") + 2:].split("\n")[0]
-            else:
-                # prompt not found in the line; return the raw line stripped
-                output = output.strip()
-
-            return output
-        except subprocess.TimeoutExpired:
-            self.process.kill()
-            raise RuntimeError(f"Command timed out: {command}")
+        return output
 
     def is_alive(self):
         """Check if the shell process is still running"""

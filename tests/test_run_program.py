@@ -11,12 +11,13 @@ def test_run_program(shell_executable):
     shell_tester.start_shell()
 
     tmp_dir = create_test_environment()
-    write_file(f"{tmp_dir}/test.txt", "Hello, World!\n")
-    output = shell_tester.execute(f"cat {tmp_dir}/test.txt")
-    assert output == "Hello, World!", f'Expected "Hello, World!" but got "{output}"'
-    cleanup_test_environment(tmp_dir)
+    try:
+        write_file(f"{tmp_dir}/test.txt", "Hello, World!\n")
+        output = shell_tester.execute(f"cat {tmp_dir}/test.txt")[0]
+        assert output == "Hello, World!\n", f'Expected "Hello, World!" but got "{output}"'
 
-    output = shell_tester.execute("ls -d /tmp")
-    assert output == "/tmp", f'Expected "/tmp" but got "{output}"'
-
-    shell_tester.stop()
+        output = shell_tester.execute("ls -d /tmp")[0]
+        assert output == "/tmp\n", f'Expected "/tmp" but got "{output}"'
+    finally:
+        cleanup_test_environment(tmp_dir)
+        shell_tester.stop()

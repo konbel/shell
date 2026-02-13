@@ -8,7 +8,7 @@ def test_echo(shell_executable):
     test_strings = ["pineapple pear", "mango blueberry strawberry"]
 
     for test_string in test_strings:
-        output = shell_tester.execute(f"echo {test_string}")
-        assert output == f"{test_string}", f"Expected \"{test_string}\" but got \"{output}\""
+        output = shell_tester.execute(f"echo {test_string}")[0]
+        assert output == f"{test_string}\n", f"Expected \"{test_string}\" but got \"{output}\""
 
     shell_tester.stop()

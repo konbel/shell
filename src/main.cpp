@@ -12,8 +12,13 @@ passwd *pw;
 char hostname[256];
 int stdout_fd;
 int stderr_fd;
+bool piped = false;
 
 void print_prompt() {
+    if (piped) {
+        return;
+    }
+
     const std::string dir = std::regex_replace(getcwd(nullptr, 0), std::regex(getenv("HOME")), "~");
 
     std::cout << ORANGE << BOLD << pw->pw_name << "@" << hostname << RESET << ":" << BLUE << BOLD
@@ -98,6 +103,8 @@ void eval(const std::string &input) {
 int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
+
+    piped = !isatty(STDOUT_FILENO);
 
     parse_path();
 

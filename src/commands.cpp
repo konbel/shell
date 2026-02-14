@@ -4,13 +4,39 @@
 
 #include "utils.h"
 
+void build_executables_cache() {
+    path = parse_path();
+    for (const auto &dir: path) {
+        if (!std::filesystem::exists(dir) || !std::filesystem::is_directory(dir)) {
+            continue;
+        }
 
-std::vector<std::string> autocomplete(const std::string &input) {
-    std::vector<std::string> results;
+        for (const auto &entry: std::filesystem::directory_iterator(dir)) {
+            if (access(entry.path().c_str(), X_OK) == 0) {
+                executables_cache[entry.path().filename()] = entry.path();
+            }
+        }
+    }
+}
+
+std::unordered_set<std::string> autocomplete_builtin(const std::string &input) {
+    std::unordered_set<std::string> results;
 
     for (const auto &key: builtins | std::views::keys) {
         if (key.starts_with(input)) {
-            results.push_back(key);
+            results.insert(key);
+        }
+    }
+
+    return results;
+}
+
+std::unordered_set<std::string> autocomplete_executable(const std::string &input) {
+    std::unordered_set<std::string> results;
+
+    for (const auto &key: executables_cache | std::views::keys) {
+        if (key.starts_with(input)) {
+            results.insert(key);
         }
     }
 

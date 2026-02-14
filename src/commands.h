@@ -3,9 +3,15 @@
 
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
-std::vector<std::string> autocomplete(const std::string &input);
+inline std::unordered_map<std::string, std::string> executables_cache;
+
+void build_executables_cache();
+
+std::unordered_set<std::string> autocomplete_builtin(const std::string &input);
+std::unordered_set<std::string> autocomplete_executable(const std::string &input);
 
 void exit_builtin(const std::string &input, const std::vector<std::string> &args);
 void type(const std::string &input, const std::vector<std::string> &args);

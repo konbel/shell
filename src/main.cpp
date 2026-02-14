@@ -84,7 +84,8 @@ void eval(const std::string &input) {
     // handle command
     if (builtins.contains(command)) {
         builtins[command](input, filtered_args);
-    } else if (const std::string full_path = find_executable(command); !full_path.empty()) {
+    } else if (executables_cache.contains(command)) {
+        // TODO: replace with proper subprocess
         std::system(input.c_str());
     } else {
         std::cout << command << ": command not found" << std::endl;
@@ -133,19 +134,36 @@ std::vector<std::string> read_input() {
         }
 
         if (next == '\t') {
-            const auto completions = autocomplete(command);
+            auto completions = autocomplete_builtin(command);
+            const auto executable_completions = autocomplete_executable(command);
+            completions.insert(executable_completions.begin(), executable_completions.end());
+
             if (completions.size() == 1) {
+                auto completed = *completions.begin();
                 if (!piped) {
                     // print the remaining to stdout
-                    for (size_t i = command.length(); i < completions[0].length(); i++) {
-                        std::cout << completions[0][i];
+                    for (size_t i = command.length(); i < completed.size(); i++) {
+                        std::cout << completed[i];
                     }
                     std::cout << " ";
                 }
-                command = completions[0] + " ";
-            } else {
-                std::cout << '\a';
+                command = completed + " ";
+                continue;
             }
+
+            if (completions.size() > 1 && completions.size() < 10) {
+                // print possible completions
+                std::cout << std::endl;
+                for (const auto &completion: completions) {
+                    std::cout << completion << "\t";
+                }
+                std::cout << std::endl;
+                print_prompt();
+                std::cout << command;
+                continue;
+            }
+
+            std::cout << '\a';
             continue;
         }
 
@@ -173,13 +191,17 @@ std::vector<std::string> read_input() {
 }
 
 [[noreturn]] int main() {
+    build_executables_cache();
+
+    // setup io
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
 
     piped = !isatty(STDOUT_FILENO);
+    stdout_fd = dup(STDOUT_FILENO);
+    stderr_fd = dup(STDERR_FILENO);
 
-    parse_path();
-
+    // get session and host information
     uid = getuid();
     pw = getpwuid(uid);
     if (pw == nullptr) {
@@ -188,9 +210,6 @@ std::vector<std::string> read_input() {
     }
 
     gethostname(hostname, sizeof(hostname));
-
-    stdout_fd = dup(STDOUT_FILENO);
-    stderr_fd = dup(STDERR_FILENO);
 
     // REPL
     while (true) {

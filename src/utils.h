@@ -24,9 +24,12 @@ inline std::string find_executable(const std::string &executable) {
 inline std::vector<std::string> split(const std::string &str, const char delimiter) {
     std::string buffer;
     std::vector<std::string> parts;
-    std::istringstream ss(str);
+    std::istringstream ss(str + delimiter);
 
     while (std::getline(ss, buffer, delimiter)) {
+        if (buffer.empty()) {
+            continue;
+        }
         parts.push_back(buffer);
     }
 
@@ -54,9 +57,9 @@ inline bool is_number(const std::string& str) {
     return !str.empty() && it == str.end();
 }
 
-inline void parse_path() {
+inline std::vector<std::string> parse_path() {
     const std::string path_env = std::getenv("PATH");
-    path = split(path_env, ':');
+    return split(path_env, ':');
 }
 
 inline std::string parse_command(const std::string &input) {

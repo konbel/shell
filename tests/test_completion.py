@@ -10,6 +10,17 @@ def test_builtin_completion(shell_executable):
         assert output == "Completion\n", f"Expected \"Completion\", got '{output}'"
 
         output = shell_tester.execute("ty\t exit")[0]
-        assert output == "exit is a shell builtin\n", f"Expected \"exit is a shell builtin\", got '{output}'"
+        assert output == "exit is a shell builtin\n", f"Expected \"exit is a shell builtin\", got \"{output}\""
+    finally:
+        shell_tester.stop()
+
+
+def test_missing_completions(shell_executable):
+    shell_tester = ShellTester(shell_executable)
+    shell_tester.start_shell()
+
+    try:
+        output = shell_tester.execute("xyz\t")[0]
+        assert output == "\axyz: command not found\n", f"Expected \"xyz: command not found\", got \"{output}\""
     finally:
         shell_tester.stop()

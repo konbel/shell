@@ -30,3 +30,4 @@ Desktop.ini
 *.tmp
 *.temp
 *.cache
+__pycache__/

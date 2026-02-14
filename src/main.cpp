@@ -136,13 +136,15 @@ std::vector<std::string> read_input() {
             const auto completions = autocomplete(command);
             if (completions.size() == 1) {
                 if (!piped) {
-                    // echo the remaining to stdout
+                    // print the remaining to stdout
                     for (size_t i = command.length(); i < completions[0].length(); i++) {
                         std::cout << completions[0][i];
                     }
                     std::cout << " ";
                 }
                 command = completions[0] + " ";
+            } else {
+                std::cout << '\a';
             }
             continue;
         }

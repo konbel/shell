@@ -4,6 +4,19 @@
 
 #include "utils.h"
 
+
+std::vector<std::string> autocomplete(const std::string &input) {
+    std::vector<std::string> results;
+
+    for (const auto &key: builtins | std::views::keys) {
+        if (key.starts_with(input)) {
+            results.push_back(key);
+        }
+    }
+
+    return results;
+}
+
 void exit_builtin(const std::string &input, const std::vector<std::string> &args) {
     int exit_code = EXIT_SUCCESS;
 

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <pwd.h>
 #include <regex>
+#include <termios.h>
 
 #include "commands.h"
 #include "utils.h"
@@ -100,7 +101,76 @@ void eval(const std::string &input) {
     }
 }
 
-int main() {
+void set_raw_mode(const termios &orig_termios) {
+    termios raw = orig_termios;
+    raw.c_lflag &= ~(ECHO | ICANON);  // Disable echo and canonical mode
+    raw.c_cc[VMIN] = 1;   // Read returns after 1 character
+    raw.c_cc[VTIME] = 0;  // No timeout, return immediately
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+}
+
+std::vector<std::string> read_input() {
+    termios orig_termios{};
+    tcgetattr(STDIN_FILENO, &orig_termios);
+    set_raw_mode(orig_termios);
+
+    std::vector<std::string> command_buffer;
+    std::string command;
+
+    while (true) {
+        const int next = getchar();
+
+        if (next == '\n') {
+            if (!piped) {
+                std::cout << std::endl;
+            }
+
+            if (!command.empty()) {
+                command_buffer.push_back(command);
+                command.clear();
+            }
+            break;
+        }
+
+        if (next == '\t') {
+            const auto completions = autocomplete(command);
+            if (completions.size() == 1) {
+                if (!piped) {
+                    // echo the remaining to stdout
+                    for (size_t i = command.length(); i < completions[0].length(); i++) {
+                        std::cout << completions[0][i];
+                    }
+                    std::cout << " ";
+                }
+                command = completions[0] + " ";
+            }
+            continue;
+        }
+
+        if (next == 127) {
+            if (command.empty()) {
+                continue;
+            }
+
+            command.pop_back();
+            std::cout << "\b \b";
+            continue;
+        }
+
+        const char c = static_cast<char>(next);
+        command += c;
+        if (!piped) {
+            std::cout << c;
+        }
+    }
+
+    // restore original terminal mode
+    tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
+
+    return command_buffer;
+}
+
+[[noreturn]] int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
 
@@ -121,14 +191,11 @@ int main() {
     stderr_fd = dup(STDERR_FILENO);
 
     // REPL
-    print_prompt();
-
-    std::string buffer;
-    while (std::getline(std::cin, buffer)) {
-        eval(buffer);
-        buffer.clear();
+    while (true) {
         print_prompt();
+        const std::vector<std::string> commands = read_input();
+        for (const std::string &command: commands) {
+            eval(command);
+        }
     }
-
-    return EXIT_SUCCESS;
 }

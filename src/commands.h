@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <vector>
 
+std::vector<std::string> autocomplete(const std::string &input);
+
 void exit_builtin(const std::string &input, const std::vector<std::string> &args);
 void type(const std::string &input, const std::vector<std::string> &args);
 void echo(const std::string &input, const std::vector<std::string> &args);

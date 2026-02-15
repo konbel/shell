@@ -104,9 +104,9 @@ void eval(const std::string &input) {
 
 void set_raw_mode(const termios &orig_termios) {
     termios raw = orig_termios;
-    raw.c_lflag &= ~(ECHO | ICANON);  // Disable echo and canonical mode
-    raw.c_cc[VMIN] = 1;   // Read returns after 1 character
-    raw.c_cc[VTIME] = 0;  // No timeout, return immediately
+    raw.c_lflag &= ~(ECHO | ICANON); // Disable echo and canonical mode
+    raw.c_cc[VMIN] = 1; // Read returns after 1 character
+    raw.c_cc[VTIME] = 0; // No timeout, return immediately
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
@@ -118,8 +118,59 @@ std::vector<std::string> read_input() {
     std::vector<std::string> command_buffer;
     std::string command;
 
+    bool last_char_tab = false;
+
     while (true) {
         const int next = getchar();
+
+        if (next == '\t') {
+            auto completions = autocomplete_builtin(command);
+            const auto executable_completions = autocomplete_executable(command);
+            completions.insert(executable_completions.begin(), executable_completions.end());
+
+            std::vector<std::string> completions_sorted;
+            for (const auto &completion: completions) {
+                completions_sorted.push_back(completion);
+            }
+            std::ranges::sort(completions_sorted);
+
+            if (completions_sorted.size() == 1) {
+                const auto &completed = completions_sorted[0];
+                if (!piped) {
+                    // print the remaining to stdout
+                    for (size_t i = command.length(); i < completed.size(); i++) {
+                        std::cout << completed[i];
+                    }
+                    std::cout << " ";
+                }
+                command = completed + " ";
+                last_char_tab = false;
+                continue;
+            }
+
+            if (completions_sorted.size() > 1 && last_char_tab) {
+                // print possible completions
+                std::cout << std::endl;
+                for (int i = 0; i < completions_sorted.size(); i++) {
+                    std::cout << completions_sorted[i];
+
+                    if (i < completions_sorted.size() - 1) {
+                        std::cout << '\t';
+                    }
+                }
+                std::cout << std::endl;
+                if (!piped) {
+                    print_prompt();
+                    std::cout << command;
+                }
+                continue;
+            }
+
+            std::cout << '\a';
+            last_char_tab = true;
+            continue;
+        }
+        last_char_tab = false;
 
         if (next == '\n') {
             if (!piped) {
@@ -131,40 +182,6 @@ std::vector<std::string> read_input() {
                 command.clear();
             }
             break;
-        }
-
-        if (next == '\t') {
-            auto completions = autocomplete_builtin(command);
-            const auto executable_completions = autocomplete_executable(command);
-            completions.insert(executable_completions.begin(), executable_completions.end());
-
-            if (completions.size() == 1) {
-                auto completed = *completions.begin();
-                if (!piped) {
-                    // print the remaining to stdout
-                    for (size_t i = command.length(); i < completed.size(); i++) {
-                        std::cout << completed[i];
-                    }
-                    std::cout << " ";
-                }
-                command = completed + " ";
-                continue;
-            }
-
-            if (completions.size() > 1 && completions.size() < 10) {
-                // print possible completions
-                std::cout << std::endl;
-                for (const auto &completion: completions) {
-                    std::cout << completion << "\t";
-                }
-                std::cout << std::endl;
-                print_prompt();
-                std::cout << command;
-                continue;
-            }
-
-            std::cout << '\a';
-            continue;
         }
 
         if (next == 127) {

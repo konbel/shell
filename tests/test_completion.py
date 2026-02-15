@@ -41,3 +41,22 @@ def test_executable_completion(shell_executable):
     finally:
         shell_tester.stop()
         cleanup_test_environment(tmp_dir)
+
+
+def test_multiple_completion(shell_executable):
+    tmp_dir = create_test_environment()
+    write_file(f"{tmp_dir}/xyz_quz", "")
+    os.chmod(f"{tmp_dir}/xyz_quz", 0o755)
+    write_file(f"{tmp_dir}/xyz_bar", "")
+    os.chmod(f"{tmp_dir}/xyz_bar", 0o755)
+    write_file(f"{tmp_dir}/xyz_buz", "")
+    os.chmod(f"{tmp_dir}/xyz_buz", 0o755)
+
+    shell_tester = ShellTester(shell_executable)
+    shell_tester.start_shell(env={"PATH": tmp_dir})
+
+    try:
+        output = shell_tester.execute("xyz_\t\t")
+        assert output[:2] == ["\x07\n", "xyz_bar\txyz_buz\txyz_quz\n"], f"Expected \"xyz_foo\txyz_bar\txyz_buz\", got \"{output}\""
+    finally:
+        shell_tester.stop()

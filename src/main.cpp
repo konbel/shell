@@ -26,7 +26,7 @@ void print_prompt() {
             << dir << RESET << "$ ";
 }
 
-inline bool check_redirect_destination(const std::vector<std::string> &arg, int i) {
+inline bool check_redirect_destination(const std::vector<std::string> &arg, const int i) {
     if (i + 1 >= arg.size()) {
         std::cout << "syntax error near unexpected token `newline'" << std::endl;
         return false;
@@ -36,7 +36,7 @@ inline bool check_redirect_destination(const std::vector<std::string> &arg, int 
 
 void eval(const std::string &input) {
     const auto command = parse_command(input);
-    const auto args = parse_args(input.substr(command.length()));
+    const auto args = parse_args(input);
 
     // check for output and error redirecting
     std::vector<std::string> filtered_args;
@@ -85,8 +85,7 @@ void eval(const std::string &input) {
     if (builtins.contains(command)) {
         builtins[command](input, filtered_args);
     } else if (executables_cache.contains(command)) {
-        // TODO: replace with proper subprocess
-        std::system(input.c_str());
+        exec(executables_cache[command], filtered_args);
     } else {
         std::cout << command << ": command not found" << std::endl;
         return;

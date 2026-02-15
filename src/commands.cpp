@@ -1,6 +1,7 @@
 #include "commands.h"
 
 #include <iostream>
+#include <sys/wait.h>
 
 #include "utils.h"
 
@@ -57,11 +58,19 @@ void exit_builtin(const std::string &input, const std::vector<std::string> &args
 }
 
 void echo(const std::string &input, const std::vector<std::string> &args) {
-    std::cout << join(args, " ") << std::endl;
+    for (int i = 1; i < args.size(); i++) {
+        std::cout << args[i];
+        if (i < args.size() - 1) {
+            std::cout << " ";
+        }
+    }
+    std::cout << std::endl;
 }
 
 void type(const std::string &input, const std::vector<std::string> &args) {
-    for (auto &arg: args) {
+    for (int i = 1; i < args.size(); i++) {
+        const std::string &arg = args[i];
+
         if (builtins.contains(arg)) {
             std::cout << arg << " is a shell builtin" << std::endl;
             continue;
@@ -72,7 +81,7 @@ void type(const std::string &input, const std::vector<std::string> &args) {
             continue;
         }
 
-        std::cout << args[0] << " not found" << std::endl;
+        std::cout << args[i] << " not found" << std::endl;
     }
 }
 
@@ -81,24 +90,46 @@ void pwd(const std::string &input, const std::vector<std::string> &args) {
 }
 
 void cd(const std::string &input, const std::vector<std::string> &args) {
-    if (args.size() > 1) {
+    if (args.size() > 2) {
         std::cout << "cd: too many arguments" << std::endl;
         return;
     }
 
     std::string dir = getenv("HOME");
 
-    if (args[0][0] == '~') {
-        if (args[0].length() > 1) {
-            for (int i = 1; i < args[0].length(); i++) {
-                dir += args[0][i];
+    if (args.size() > 1 && !args[1].empty() && args[1][0] == '~') {
+        if (args[1].length() > 1) {
+            for (int i = 1; i < args[1].length(); i++) {
+                dir += args[1][i];
             }
         }
-    } else if (!args[0].empty()) {
-        dir = args[0];
+    } else if (args.size() > 1 && !args[1].empty()) {
+        dir = args[1];
     }
 
     if (chdir(dir.c_str()) != 0) {
-        std::cout << "cd: " << args[0] << ": No such file or directory" << std::endl;
+        std::cout << "cd: " << args[1] << ": No such file or directory" << std::endl;
+    }
+}
+
+void exec(const std::string &executable, const std::vector<std::string> &args) {
+    switch (const int pid = fork()) {
+        case -1:
+            perror("fork");
+            break;
+        case 0: {
+            const auto argv = new char *[args.size() + 1];
+            for (int i = 0; i < args.size(); i++) {
+                argv[i] = const_cast<char *>(args[i].c_str());
+            }
+            argv[args.size()] = nullptr;
+
+            execv(executable.c_str(), argv);
+            perror("exec");
+            delete[] argv;
+            break;
+        }
+        default:
+            waitpid(pid, nullptr, 0);
     }
 }

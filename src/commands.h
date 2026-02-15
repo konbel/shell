@@ -27,4 +27,6 @@ inline std::unordered_map<std::string, void (*)(const std::string &, const std::
     {std::string("cd"), &cd},
 };
 
+void exec(const std::string &executable, const std::vector<std::string> &args);
+
 #endif //SHELL_COMMANDS_H

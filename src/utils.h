@@ -9,7 +9,6 @@
 
 inline std::vector<std::string> path;
 inline std::regex ws_regex("\\s+");
-inline std::regex trim_regex("^\\s+|\\s+$");
 
 inline std::string find_executable(const std::string &executable) {
     for (const std::string &dir: path) {
@@ -106,15 +105,13 @@ inline std::string parse_command(const std::string &input) {
 }
 
 inline std::vector<std::string> parse_args(const std::string &arg_string) {
-    const std::string trimmed = std::regex_replace(arg_string, trim_regex, "");
-
     std::vector<std::string> args;
     std::string buffer;
     bool in_single_quotes = false;
     bool in_double_quotes = false;
     bool escaped = false;
 
-    for (const char c : trimmed) {
+    for (const char c : arg_string) {
         // escaping
         if (escaped) {
             buffer += c;
@@ -163,7 +160,9 @@ inline std::vector<std::string> parse_args(const std::string &arg_string) {
         buffer += c;
     }
 
-    args.push_back(buffer);
+    if (!buffer.empty()) {
+        args.push_back(buffer);
+    }
     return args;
 }
 

@@ -60,3 +60,22 @@ def test_multiple_completion(shell_executable):
         assert output[:2] == ["\x07\n", "xyz_bar\txyz_buz\txyz_quz\n"], f"Expected \"xyz_foo\txyz_bar\txyz_buz\", got \"{output}\""
     finally:
         shell_tester.stop()
+
+
+def test_longest_common_prefix(shell_executable):
+    tmp_dir = create_test_environment()
+    write_file(f"{tmp_dir}/xyz_quz", "#!/bin/sh\necho Hello World")
+    os.chmod(f"{tmp_dir}/xyz_quz", 0o755)
+    write_file(f"{tmp_dir}/xyz_bar", "")
+    os.chmod(f"{tmp_dir}/xyz_bar", 0o755)
+    write_file(f"{tmp_dir}/xyz_buz", "")
+    os.chmod(f"{tmp_dir}/xyz_buz", 0o755)
+
+    shell_tester = ShellTester(shell_executable)
+    shell_tester.start_shell(env={"PATH": tmp_dir})
+
+    try:
+        output = shell_tester.execute("x\tquz")[0]
+        assert output == "Hello World\n", f"Expected \"Hello World\", got \"{output}\""
+    finally:
+        shell_tester.stop()

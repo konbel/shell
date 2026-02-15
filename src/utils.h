@@ -167,4 +167,32 @@ inline std::vector<std::string> parse_args(const std::string &arg_string) {
     return args;
 }
 
+inline std::string lcp(const std::vector<std::string> &candidates) {
+    std::string result;
+
+    int index = 0;
+    while (true) {
+        if (index >= candidates[0].length()) {
+            return result;
+        }
+
+        const char current = candidates[0][index];
+
+        for (int i = 1; i < candidates.size(); i++) {
+            const auto &candidate = candidates[i];
+
+            if (index >= candidate.length()) {
+                return result;
+            }
+
+            if (candidate[index] != current) {
+                return result;
+            }
+        }
+
+        index++;
+        result += current;
+    }
+}
+
 #endif //SHELL_UTILS_H

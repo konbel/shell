@@ -166,6 +166,21 @@ std::vector<std::string> read_input() {
                 continue;
             }
 
+            if (completions_sorted.size() > 1) {
+                const std::string common_prefix = lcp(completions_sorted);
+
+                if (command.size() != common_prefix.size()) {
+                    if (!piped) {
+                        // print the remaining to stdout
+                        for (size_t i = command.length(); i < common_prefix.size(); i++) {
+                            std::cout << common_prefix[i];
+                        }
+                    }
+                    command = common_prefix;
+                    continue;
+                }
+            }
+
             std::cout << '\a';
             last_char_tab = true;
             continue;

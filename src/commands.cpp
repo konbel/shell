@@ -153,8 +153,26 @@ void cd(const std::string &input, const std::vector<std::string> &args) {
     }
 }
 
+void history(const std::string &input, const std::vector<std::string> &args) {
+    size_t n = 999;
+    if (args.size() > 1) {
+        if (!is_number(args[1])) {
+            std::cout << "history: " << args[1] << ": numeric argument required" << std::endl;
+            return;
+        }
+        n = std::stoul(args[1]);
+    }
+    if (n > history_cache.size()) {
+        n = history_cache.size();
+    }
+
+    for (size_t i = history_cache.size() - n; i < history_cache.size(); i++) {
+        std::cout << "  " << i + 1 << "  " << history_cache[i] << std::endl;
+    }
+}
+
 int exec(const std::string &executable, const std::vector<std::string> &args, const int output_fd = -1,
-          const int input_fd = -1) {
+         const int input_fd = -1) {
     switch (const int pid = fork()) {
         case -1:
             perror("fork");

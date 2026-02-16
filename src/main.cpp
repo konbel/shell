@@ -129,8 +129,10 @@ void eval(const std::string &input) {
         // execute command
         redirect_io(output_fd, input_fd, error_fd);
         if (builtins.contains(command)) {
+            history_cache.push_back(inputs[i]);
             builtins[command](input, filtered_args);
         } else if (executables_cache.contains(command)) {
+            history_cache.push_back(inputs[i]);
             const int pid = exec(executables_cache[command], filtered_args, output_fd, input_fd);
             if (pid != -1) {
                 pids.push_back(pid);

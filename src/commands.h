@@ -2,6 +2,7 @@
 #define SHELL_COMMANDS_H
 
 #include <string>
+#include <unistd.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -12,6 +13,9 @@ void build_executables_cache();
 
 std::unordered_set<std::string> autocomplete_builtin(const std::string &input);
 std::unordered_set<std::string> autocomplete_executable(const std::string &input);
+
+void redirect_io(int output_fd, int input_fd, int error_fd);
+void restore_io();
 
 void exit_builtin(const std::string &input, const std::vector<std::string> &args);
 void type(const std::string &input, const std::vector<std::string> &args);
@@ -27,6 +31,6 @@ inline std::unordered_map<std::string, void (*)(const std::string &, const std::
     {std::string("cd"), &cd},
 };
 
-void exec(const std::string &executable, const std::vector<std::string> &args);
+int exec(const std::string &executable, const std::vector<std::string> &args, int output_fd, int input_fd);
 
 #endif //SHELL_COMMANDS_H

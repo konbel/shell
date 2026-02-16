@@ -1,9 +1,12 @@
 #include "commands.h"
 
 #include <iostream>
-#include <sys/wait.h>
 
 #include "utils.h"
+
+int stdout_fd = -1;
+int stdin_fd = -1;
+int stderr_fd = -1;
 
 void build_executables_cache() {
     path = parse_path();
@@ -42,6 +45,44 @@ std::unordered_set<std::string> autocomplete_executable(const std::string &input
     }
 
     return results;
+}
+
+void redirect_io(const int output_fd = -1, const int input_fd = -1, const int error_fd = -1) {
+    stdout_fd = dup(STDOUT_FILENO);
+    stdin_fd = dup(STDIN_FILENO);
+    stderr_fd = dup(STDERR_FILENO);
+
+    if (output_fd != -1) {
+        dup2(output_fd, STDOUT_FILENO);
+    }
+
+    if (input_fd != -1) {
+        dup2(input_fd, STDIN_FILENO);
+    }
+
+    if (error_fd != -1) {
+        dup2(error_fd, STDERR_FILENO);
+    }
+}
+
+void restore_io() {
+    if (stdout_fd != 0) {
+        dup2(stdout_fd, STDOUT_FILENO);
+        close(stdout_fd);
+        stdout_fd = -1;
+    }
+
+    if (stdin_fd != 0) {
+        dup2(stdin_fd, STDIN_FILENO);
+        close(stdin_fd);
+        stdin_fd = -1;
+    }
+
+    if (stderr_fd != 0) {
+        dup2(stderr_fd, STDERR_FILENO);
+        close(stderr_fd);
+        stderr_fd = -1;
+    }
 }
 
 void exit_builtin(const std::string &input, const std::vector<std::string> &args) {
@@ -112,7 +153,8 @@ void cd(const std::string &input, const std::vector<std::string> &args) {
     }
 }
 
-void exec(const std::string &executable, const std::vector<std::string> &args) {
+int exec(const std::string &executable, const std::vector<std::string> &args, const int output_fd = -1,
+          const int input_fd = -1) {
     switch (const int pid = fork()) {
         case -1:
             perror("fork");
@@ -124,12 +166,22 @@ void exec(const std::string &executable, const std::vector<std::string> &args) {
             }
             argv[args.size()] = nullptr;
 
+            // redirect input & output
+            if (output_fd != -1) {
+                dup2(output_fd, STDOUT_FILENO);
+            }
+
+            if (input_fd != -1) {
+                dup2(input_fd, STDIN_FILENO);
+            }
+
             execv(executable.c_str(), argv);
             perror("exec");
             delete[] argv;
             break;
         }
         default:
-            waitpid(pid, nullptr, 0);
+            return pid;
     }
+    return -1;
 }

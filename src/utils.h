@@ -9,6 +9,7 @@
 
 inline std::vector<std::string> path;
 inline std::regex ws_regex("\\s+");
+inline std::regex trim_regex("^\\s+|\\s+$");
 
 inline std::string find_executable(const std::string &executable) {
     for (const std::string &dir: path) {
@@ -26,6 +27,7 @@ inline std::vector<std::string> split(const std::string &str, const char delimit
     std::istringstream ss(str + delimiter);
 
     while (std::getline(ss, buffer, delimiter)) {
+        buffer = std::regex_replace(buffer, trim_regex, "");
         if (buffer.empty()) {
             continue;
         }

@@ -130,9 +130,11 @@ void eval(const std::string &input) {
         redirect_io(output_fd, input_fd, error_fd);
         if (builtins.contains(command)) {
             history_cache.push_back(inputs[i]);
+            history_index = history_cache.size();
             builtins[command](input, filtered_args);
         } else if (executables_cache.contains(command)) {
             history_cache.push_back(inputs[i]);
+            history_index = history_cache.size();
             const int pid = exec(executables_cache[command], filtered_args, output_fd, input_fd);
             if (pid != -1) {
                 pids.push_back(pid);
@@ -169,6 +171,22 @@ void set_raw_mode(const termios &orig_termios) {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
+inline int set_non_blocking() {
+    const int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
+    return flags;
+}
+
+inline void set_blocking(const int flags) {
+    fcntl(STDIN_FILENO, F_SETFL, flags);
+}
+
+inline void clear_chars(const size_t count) {
+    for (int i = 0; i < count; i++) {
+        std::cout << "\b \b";
+    }
+}
+
 std::vector<std::string> read_input() {
     termios orig_termios{};
     tcgetattr(STDIN_FILENO, &orig_termios);
@@ -182,6 +200,61 @@ std::vector<std::string> read_input() {
     while (true) {
         const int next = getchar();
 
+        // handle escape sequences for arrow keys
+        if (next == 27) {
+            const int flags = set_non_blocking();
+
+            const int next1 = getchar();
+            if (next1 == -1) {
+                continue;
+            }
+
+            if (next1 == '[') {
+                const int next2 = getchar();
+                if (next2 == -1) {
+                    set_blocking(flags);
+                    continue;
+                }
+
+                if (next2 == 'A') {
+                    if (history_index == history_cache.size()) {
+                        typed_command = command;
+                    }
+
+                    if (history_index > 0) {
+                        clear_chars(command.size());
+                        history_index--;
+                        command = history_cache[history_index];
+
+                        if (!piped) {
+                            std::cout << command;
+                        }
+                    }
+                }
+
+                if (next2 == 'B') {
+                    if (history_index < history_cache.size()) {
+                        clear_chars(command.size());
+                        history_index++;
+
+                        if (history_index == history_cache.size()) {
+                            command = typed_command;
+                        } else {
+                            command = history_cache[history_index];
+                        }
+
+                        if (!piped) {
+                            std::cout << command;
+                        }
+                    }
+                }
+            }
+
+            set_blocking(flags);
+            continue;
+        }
+
+        // handle completion
         if (next == '\t') {
             auto completions = autocomplete_builtin(command);
             const auto executable_completions = autocomplete_executable(command);
@@ -246,6 +319,7 @@ std::vector<std::string> read_input() {
         }
         last_char_tab = false;
 
+        // handle enter
         if (next == '\n') {
             if (!piped) {
                 std::cout << std::endl;
@@ -258,6 +332,7 @@ std::vector<std::string> read_input() {
             break;
         }
 
+        // handle backspace
         if (next == 127) {
             if (command.empty()) {
                 continue;
@@ -268,6 +343,7 @@ std::vector<std::string> read_input() {
             continue;
         }
 
+        // normal char
         const char c = static_cast<char>(next);
         command += c;
         if (!piped) {

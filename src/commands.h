@@ -8,6 +8,8 @@
 #include <vector>
 
 inline std::vector<std::string> history_cache;
+inline size_t history_index = 0;
+inline std::string typed_command;
 
 inline std::unordered_map<std::string, std::string> executables_cache;
 void build_executables_cache();

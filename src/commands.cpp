@@ -1,5 +1,6 @@
 #include "commands.h"
 
+#include <fstream>
 #include <iostream>
 
 #include "utils.h"
@@ -7,6 +8,49 @@
 int stdout_fd = -1;
 int stdin_fd = -1;
 int stderr_fd = -1;
+
+void read_history(const std::string &file_path) {
+    std::ifstream file(file_path);
+    if (!file.is_open()) {
+        // std::cout << "history: " << file_path << ": No such file or directory" << std::endl;
+        return;
+    }
+
+    std::string buffer;
+    while (std::getline(file, buffer)) {
+        history_cache.push_back(buffer);
+    }
+
+    file.close();
+}
+
+void write_history(const std::string &file_path) {
+    std::ofstream file(file_path);
+    if (!file.is_open()) {
+        // std::cout << "history: " << file_path << ": No such file or directory" << std::endl;
+        return;
+    }
+
+    for (const std::string &entry: history_cache) {
+        file << entry << std::endl;
+    }
+
+    file.close();
+}
+
+void append_history(const std::string &file_path) {
+    std::ofstream file(file_path, std::ios::app);
+    if (!file.is_open()) {
+        // std::cout << "history: " << file_path << ": No such file or directory" << std::endl;
+        return;
+    }
+
+    for (const std::string &entry: history_cache) {
+        file << entry << std::endl;
+    }
+
+    file.close();
+}
 
 void build_executables_cache() {
     path = parse_path();
@@ -154,12 +198,44 @@ void cd(const std::string &input, const std::vector<std::string> &args) {
 }
 
 void history(const std::string &input, const std::vector<std::string> &args) {
+    // clear
+    if (args.size() > 1 && args[1] == "-c") {
+        history_cache.clear();
+        history_index = 0;
+        return;
+    }
+
+    // load from file
+    if (args.size() > 2) {
+        if (args[1] == "-r") {
+            read_history(args[2]);
+            return;
+        }
+
+        if (args[1] == "-w") {
+            write_history(args[2]);
+            return;
+        }
+
+        if (args[1] == "-a") {
+            append_history(args[2]);
+            return;
+        }
+    }
+
+    // print history
     size_t n = 999;
     if (args.size() > 1) {
         if (!is_number(args[1])) {
             std::cout << "history: " << args[1] << ": numeric argument required" << std::endl;
             return;
         }
+
+        if (args.size() > 2) {
+            std::cout << "history: too many arguments" << std::endl;
+            return;
+        }
+
         n = std::stoul(args[1]);
     }
     if (n > history_cache.size()) {

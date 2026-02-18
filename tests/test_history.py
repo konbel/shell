@@ -13,6 +13,8 @@ def test_history(shell_executable):
         shell_tester.execute("echo Hello World")
         shell_tester.execute("echo Another Command")
         output = shell_tester.execute("history")
+        from time import sleep
+        sleep(0.1)
         assert output == ["  1  echo Hello World\n", "  2  echo Another Command\n",
                           "  3  history\n"], f"Expected history output to match the executed commands, but got: {output}"
 

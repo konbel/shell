@@ -34,16 +34,66 @@ inline bool check_redirect_destination(const std::vector<std::string> &arg, cons
     return true;
 }
 
+int output_fd = -1;
+int input_fd = -1;
+int error_fd = -1;
+
+std::vector<std::string> redirect_output(const std::vector<std::string> &args) {
+    std::vector<std::string> filtered_args;
+    for (int j = 0; j < args.size(); j++) {
+        const std::string &arg = args[j];
+
+        if (arg == ">" || arg == "1>") {
+            if (check_redirect_destination(args, j)) {
+                const std::string &output = args[j + 1];
+                output_fd = open(output.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                if (output_fd == -1) {
+                    perror("error opening file for output");
+                }
+            }
+            break;
+        }
+
+        if (arg == "2>") {
+            if (check_redirect_destination(args, j)) {
+                const std::string &output = args[j + 1];
+                error_fd = open(output.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                if (error_fd == -1) {
+                    perror("error opening file for error");
+                }
+            }
+            break;
+        }
+
+        if (arg == ">>" || arg == "1>>") {
+            if (check_redirect_destination(args, j)) {
+                const std::string &output = args[j + 1];
+                output_fd = open(output.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
+                if (output_fd == -1) {
+                    perror("error opening file for output");
+                }
+            }
+            break;
+        }
+
+        if (arg == "2>>") {
+            if (check_redirect_destination(args, j)) {
+                const std::string &output = args[j + 1];
+                error_fd = open(output.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
+                if (error_fd == -1) {
+                    perror("error opening file for error");
+                }
+            }
+            break;
+        }
+
+        filtered_args.push_back(arg);
+    }
+    return filtered_args;
+}
+
 void eval(const std::string &input) {
     const std::vector<std::string> inputs = split(input, '|');
-
-    // parse individual commands
-    for (const auto &cmd: inputs) {
-        const auto command = parse_command(cmd);
-        const auto args = parse_args(cmd);
-
-        // check for output and error redirecting
-    }
 
     // create pipes if necessary
     const size_t pipe_count = inputs.size() - 1;
@@ -61,61 +111,11 @@ void eval(const std::string &input) {
         const auto &command = parse_command(inputs[i]);
         const auto &args = parse_args(inputs[i]);
 
-        int output_fd = -1;
-        int input_fd = -1;
-        int error_fd = -1;
-
         // check for output and error redirecting
-        std::vector<std::string> filtered_args;
-        for (int j = 0; j < args.size(); j++) {
-            const std::string &arg = args[j];
-
-            if (arg == ">" || arg == "1>") {
-                if (check_redirect_destination(args, j)) {
-                    const std::string &output = args[j + 1];
-                    output_fd = open(output.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
-                    if (output_fd == -1) {
-                        perror("error opening file for output");
-                    }
-                }
-                break;
-            }
-
-            if (arg == "2>") {
-                if (check_redirect_destination(args, j)) {
-                    const std::string &output = args[j + 1];
-                    error_fd = open(output.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
-                    if (error_fd == -1) {
-                        perror("error opening file for error");
-                    }
-                }
-                break;
-            }
-
-            if (arg == ">>" || arg == "1>>") {
-                if (check_redirect_destination(args, j)) {
-                    const std::string &output = args[j + 1];
-                    output_fd = open(output.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
-                    if (output_fd == -1) {
-                        perror("error opening file for output");
-                    }
-                }
-                break;
-            }
-
-            if (arg == "2>>") {
-                if (check_redirect_destination(args, j)) {
-                    const std::string &output = args[j + 1];
-                    error_fd = open(output.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
-                    if (error_fd == -1) {
-                        perror("error opening file for error");
-                    }
-                }
-                break;
-            }
-
-            filtered_args.push_back(arg);
-        }
+        output_fd = -1;
+        input_fd = -1;
+        error_fd = -1;
+        const std::vector<std::string> filtered_args = redirect_output(args);
 
         // connect pipes
         if (i <= static_cast<int>(pipe_count - 1)) {
@@ -131,10 +131,12 @@ void eval(const std::string &input) {
         if (builtins.contains(command)) {
             history_cache.push_back(inputs[i]);
             history_index = history_cache.size();
+
             builtins[command](input, filtered_args);
         } else if (executables_cache.contains(command)) {
             history_cache.push_back(inputs[i]);
             history_index = history_cache.size();
+
             const int pid = exec(executables_cache[command], filtered_args, output_fd, input_fd);
             if (pid != -1) {
                 pids.push_back(pid);
@@ -187,6 +189,115 @@ inline void clear_chars(const size_t count) {
     }
 }
 
+void handle_arrow_keys(std::string &command) {
+    const int next1 = getchar();
+    if (next1 == -1) {
+        return;
+    }
+
+    if (next1 == '[') {
+        const int next2 = getchar();
+        if (next2 == -1) {
+            return;
+        }
+
+        if (next2 == 'A') {
+            if (history_index == history_cache.size()) {
+                typed_command = command;
+            }
+
+            if (history_index > 0) {
+                clear_chars(command.size());
+                history_index--;
+                command = history_cache[history_index];
+
+                if (!piped) {
+                    std::cout << command;
+                }
+            }
+        }
+
+        if (next2 == 'B') {
+            if (history_index < history_cache.size()) {
+                clear_chars(command.size());
+                history_index++;
+
+                if (history_index == history_cache.size()) {
+                    command = typed_command;
+                } else {
+                    command = history_cache[history_index];
+                }
+
+                if (!piped) {
+                    std::cout << command;
+                }
+            }
+        }
+    }
+}
+
+void handle_completions(std::string &command, bool &last_char_tab) {
+    auto completions = autocomplete_builtin(command);
+    const auto executable_completions = autocomplete_executable(command);
+    completions.insert(executable_completions.begin(), executable_completions.end());
+
+    std::vector<std::string> completions_sorted;
+    for (const auto &completion: completions) {
+        completions_sorted.push_back(completion);
+    }
+    std::ranges::sort(completions_sorted);
+
+    if (completions_sorted.size() == 1) {
+        const auto &completed = completions_sorted[0];
+        if (!piped) {
+            // print the remaining to stdout
+            for (size_t i = command.length(); i < completed.size(); i++) {
+                std::cout << completed[i];
+            }
+            std::cout << " ";
+        }
+        command = completed + " ";
+        last_char_tab = false;
+        return;
+    }
+
+    if (completions_sorted.size() > 1 && last_char_tab) {
+        // print possible completions
+        std::cout << std::endl;
+        for (int i = 0; i < completions_sorted.size(); i++) {
+            std::cout << completions_sorted[i];
+
+            if (i < completions_sorted.size() - 1) {
+                std::cout << '\t';
+            }
+        }
+        std::cout << std::endl;
+        if (!piped) {
+            print_prompt();
+            std::cout << command;
+        }
+        return;
+    }
+
+    if (completions_sorted.size() > 1) {
+        const std::string common_prefix = lcp(completions_sorted);
+
+        if (command.size() != common_prefix.size()) {
+            if (!piped) {
+                // print the remaining to stdout
+                for (size_t i = command.length(); i < common_prefix.size(); i++) {
+                    std::cout << common_prefix[i];
+                }
+            }
+            command = common_prefix;
+            return;
+        }
+    }
+
+    std::cout << '\a';
+    last_char_tab = true;
+}
+
 std::vector<std::string> read_input() {
     termios orig_termios{};
     tcgetattr(STDIN_FILENO, &orig_termios);
@@ -203,118 +314,14 @@ std::vector<std::string> read_input() {
         // handle escape sequences for arrow keys
         if (next == 27) {
             const int flags = set_non_blocking();
-
-            const int next1 = getchar();
-            if (next1 == -1) {
-                continue;
-            }
-
-            if (next1 == '[') {
-                const int next2 = getchar();
-                if (next2 == -1) {
-                    set_blocking(flags);
-                    continue;
-                }
-
-                if (next2 == 'A') {
-                    if (history_index == history_cache.size()) {
-                        typed_command = command;
-                    }
-
-                    if (history_index > 0) {
-                        clear_chars(command.size());
-                        history_index--;
-                        command = history_cache[history_index];
-
-                        if (!piped) {
-                            std::cout << command;
-                        }
-                    }
-                }
-
-                if (next2 == 'B') {
-                    if (history_index < history_cache.size()) {
-                        clear_chars(command.size());
-                        history_index++;
-
-                        if (history_index == history_cache.size()) {
-                            command = typed_command;
-                        } else {
-                            command = history_cache[history_index];
-                        }
-
-                        if (!piped) {
-                            std::cout << command;
-                        }
-                    }
-                }
-            }
-
+            handle_arrow_keys(command);
             set_blocking(flags);
             continue;
         }
 
         // handle completion
         if (next == '\t') {
-            auto completions = autocomplete_builtin(command);
-            const auto executable_completions = autocomplete_executable(command);
-            completions.insert(executable_completions.begin(), executable_completions.end());
-
-            std::vector<std::string> completions_sorted;
-            for (const auto &completion: completions) {
-                completions_sorted.push_back(completion);
-            }
-            std::ranges::sort(completions_sorted);
-
-            if (completions_sorted.size() == 1) {
-                const auto &completed = completions_sorted[0];
-                if (!piped) {
-                    // print the remaining to stdout
-                    for (size_t i = command.length(); i < completed.size(); i++) {
-                        std::cout << completed[i];
-                    }
-                    std::cout << " ";
-                }
-                command = completed + " ";
-                last_char_tab = false;
-                continue;
-            }
-
-            if (completions_sorted.size() > 1 && last_char_tab) {
-                // print possible completions
-                std::cout << std::endl;
-                for (int i = 0; i < completions_sorted.size(); i++) {
-                    std::cout << completions_sorted[i];
-
-                    if (i < completions_sorted.size() - 1) {
-                        std::cout << '\t';
-                    }
-                }
-                std::cout << std::endl;
-                if (!piped) {
-                    print_prompt();
-                    std::cout << command;
-                }
-                continue;
-            }
-
-            if (completions_sorted.size() > 1) {
-                const std::string common_prefix = lcp(completions_sorted);
-
-                if (command.size() != common_prefix.size()) {
-                    if (!piped) {
-                        // print the remaining to stdout
-                        for (size_t i = command.length(); i < common_prefix.size(); i++) {
-                            std::cout << common_prefix[i];
-                        }
-                    }
-                    command = common_prefix;
-                    continue;
-                }
-            }
-
-            std::cout << '\a';
-            last_char_tab = true;
+            handle_completions(command, last_char_tab);
             continue;
         }
         last_char_tab = false;

@@ -358,6 +358,14 @@ std::vector<std::string> read_input() {
 }
 
 [[noreturn]] int main() {
+    const char *history_file = getenv("HISTFILE");
+    if (history_file == nullptr) {
+        const std::string history_file_path = std::string(getenv("HOME")) + "/.shell_history";
+        read_history(history_file_path);
+    } else {
+        read_history(history_file);
+    }
+
     build_executables_cache();
 
     // setup io

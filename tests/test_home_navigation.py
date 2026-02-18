@@ -1,4 +1,4 @@
-from shell_test_utils import ShellTester, create_test_environment, ensure_dir
+from shell_test_utils import ShellTester, create_test_environment, ensure_dir, cleanup_test_environment
 
 
 def test_home_navigation(shell_executable):
@@ -63,3 +63,4 @@ def test_home_navigation(shell_executable):
         assert output == home_dir + "\n", f'Expected "{home_dir}" at end but got "{output}"'
     finally:
         shell_tester.stop()
+        cleanup_test_environment(tmp_dir)

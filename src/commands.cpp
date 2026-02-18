@@ -130,6 +130,14 @@ void restore_io() {
 }
 
 void exit_builtin(const std::string &input, const std::vector<std::string> &args) {
+    const char *history_file = getenv("HISTFILE");
+    if (history_file == nullptr) {
+        const std::string history_file_path = std::string(getenv("HOME")) + "/.shell_history";
+        write_history(history_file_path);
+    } else {
+        write_history(history_file);
+    }
+
     int exit_code = EXIT_SUCCESS;
 
     if (args.size() == 2 && is_number(args[1])) {
@@ -221,6 +229,9 @@ void history(const std::string &input, const std::vector<std::string> &args) {
             append_history(args[2]);
             return;
         }
+
+        std::cout << "history: too many arguments" << std::endl;
+        return;
     }
 
     // print history
@@ -228,11 +239,6 @@ void history(const std::string &input, const std::vector<std::string> &args) {
     if (args.size() > 1) {
         if (!is_number(args[1])) {
             std::cout << "history: " << args[1] << ": numeric argument required" << std::endl;
-            return;
-        }
-
-        if (args.size() > 2) {
-            std::cout << "history: too many arguments" << std::endl;
             return;
         }
 

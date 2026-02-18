@@ -10,7 +10,6 @@
 inline std::vector<std::string> history_cache;
 inline size_t history_index = 0;
 inline std::string typed_command;
-constexpr char DEFAULT_HISTORY_FILE[] = ".shell_history";
 void read_history(const std::string &file_path);
 void write_history(const std::string &file_path);
 void append_history(const std::string &file_path);

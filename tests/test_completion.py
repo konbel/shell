@@ -60,6 +60,7 @@ def test_multiple_completion(shell_executable):
         assert output[:2] == ["\x07\n", "xyz_bar\txyz_buz\txyz_quz\n"], f"Expected \"xyz_foo\txyz_bar\txyz_buz\", got \"{output}\""
     finally:
         shell_tester.stop()
+        cleanup_test_environment(tmp_dir)
 
 
 def test_longest_common_prefix(shell_executable):
@@ -79,3 +80,4 @@ def test_longest_common_prefix(shell_executable):
         assert output == "Hello World\n", f"Expected \"Hello World\", got \"{output}\""
     finally:
         shell_tester.stop()
+        cleanup_test_environment(tmp_dir)
